@@ -1,0 +1,51 @@
+node {
+	def appName = "DnBCombine_PyDocParser"
+	def res = "Success"
+	def col = "#00ff00"
+	def er = ""
+	try {
+		stage('Setup') {
+			office365ConnectorSend message: "Scan starting: ${appName}", status: "Starting", color: "#000000", webhookUrl: "${officeWebhookUrl}"
+			cleanWs deleteDirs: true, notFailBuild: true
+		}
+		stage('Checkout') {
+		
+			checkout scm
+		}
+	
+		stage('Scan') {
+			step([$class: 'CxScanBuilder', comment: '', credentialsId: '', excludeFolders: 'test,AdditionalFiles,batchfiles,chromedriver,ConfigFiles,InputFiles,LogFiles,OutputFiles,pyAPICallParser,DataIngestSite', excludeOpenSourceFolders: '',
+				exclusionsSetting: 'job', failBuildOnNewResults: false, failBuildOnNewSeverity: 'HIGH',
+				filterPattern: '''!**/_cvs/**/*, !**/.svn/**/*,   !**/.hg/**/*,   !**/.git/**/*,  !**/.bzr/**/*, !**/bin/**/*,
+					!**/obj/**/*,  !**/backup/**/*, !**/.idea/**/*, !**/*.DS_Store, !**/*.ipr,     !**/*.iws,
+					!**/*.bak,     !**/*.tmp,       !**/*.aac,      !**/*.aif,      !**/*.iff,     !**/*.m3u, !**/*.mid, !**/*.mp3,
+					!**/*.mpa,     !**/*.ra,        !**/*.wav,      !**/*.wma,      !**/*.3g2,     !**/*.3gp, !**/*.asf, !**/*.asx,
+					!**/*.avi,     !**/*.flv,       !**/*.mov,      !**/*.mp4,      !**/*.mpg,     !**/*.rm,  !**/*.swf, !**/*.vob,
+					!**/*.wmv,     !**/*.bmp,       !**/*.gif,      !**/*.jpg,      !**/*.png,     !**/*.psd, !**/*.tif, !**/*.swf,
+					!**/*.jar,     !**/*.zip,       !**/*.rar,      !**/*.exe,      !**/*.dll,     !**/*.pdb, !**/*.7z,  !**/*.gz,
+					!**/*.tar.gz,  !**/*.tar,       !**/*.gz,       !**/*.ahtm,     !**/*.ahtml,   !**/*.fhtml, !**/*.hdm,
+					!**/*.hdml,    !**/*.hsql,      !**/*.ht,       !**/*.hta,      !**/*.htc,     !**/*.htd, !**/*.war, !**/*.ear,
+					!**/*.htmls,   !**/*.ihtml,     !**/*.mht,      !**/*.mhtm,     !**/*.mhtml,   !**/*.ssi, !**/*.stm,
+					!**/*.stml,    !**/*.ttml,      !**/*.txn,      !**/*.xhtm,     !**/*.xhtml,   !**/*.class, !**/*.iml, !Checkmarx/Reports/*.*''',
+				fullScanCycle: 10, teamPath: 'CxServer/SP/Company/Service Accounts/BAS - D&B Combine SAA-58668', includeOpenSourceFolders: '',
+				osaArchiveIncludePatterns: '*.zip, *.war, *.ear, *.tgz', osaInstallBeforeScan: false, password: '', preset: '36',
+				projectName: 'DnBCombine_PyDocParser', sastEnabled: true, serverUrl: 'https://dnb.checkmarx.net', sourceEncoding: '1', username: '',
+				vulnerabilityThresholdResult: 'FAILURE', waitForResultsEnabled: true])
+								
+		    sh "source ${pyt_path}/activate && pip3 install -r setup.cfg && deactivate" snykSecurity additionalArguments: "--command=${pyt_path}/python3", failOnIssues: false, organisation: 'bas-dandb-combine-saa-58668', snykInstallation: 'Sneaky_Plugin', snykTokenId: 'snyk_jarvis'
+ 
+			
+		}
+	}
+	catch (e) {
+		currentBuild.result = 'FAILURE'
+		res = "Failure:"
+		col = "#ff0000"
+	}
+	finally {
+		emailext body: '''Hi Team,
+
+Checkmarx, Snyk scan has been completed for DnBCombine_PyDocParser in BAS - D&B Combine SAA-58668.''', subject: 'Checkmarx, Snyk Scans jobs are Completed for BAS - D&B Combine SAA-58668', to: 'ShethD@dnb.com'
+		office365ConnectorSend message: "Scan complete: ${appName}", status: "${res} ${er}", color: "${col}", webhookUrl: "${officeWebhookUrl}"
+	}
+}
